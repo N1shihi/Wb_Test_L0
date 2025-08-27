@@ -34,7 +34,7 @@ func (s *Service) SaveOrder(order models.Order) error {
 		log.Printf("service: failed to save order %s: %v", order.OrderUID, err)
 		return err
 	}
-	log.Printf("service: saved order %s to db and cache", order.OrderUID)
+	log.Printf("service: saved order %s to db", order.OrderUID)
 	return nil
 }
 

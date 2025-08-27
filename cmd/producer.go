@@ -71,9 +71,9 @@ func main() {
 		order := baseOrder
 
 		u := uuid.New().String()
-		order.OrderUID = fmt.Sprintf("%s-%s", "order", u)
-		order.TrackNumber = fmt.Sprintf("%s-%s", "track", u)
-		order.Payment.Transaction = fmt.Sprintf("%s-%s", "tx", u)
+		order.OrderUID = fmt.Sprintf("%s", u)
+		order.TrackNumber = fmt.Sprintf("%s", u)
+		order.Payment.Transaction = fmt.Sprintf("%s", u)
 
 		for idx := range order.Items {
 			order.Items[idx].Rid = fmt.Sprintf("%s-%s-%d", "rid", u, idx)

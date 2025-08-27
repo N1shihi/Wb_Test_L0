@@ -16,11 +16,7 @@
 
 Выполните в разных терминалах:
 
-Старт сервиса обработки заказов
 
-```
-docker-compose up --build order_service
-```
 
 Старт продюсера
 
@@ -28,9 +24,13 @@ docker-compose up --build order_service
 docker-compose up --build order_producer
 ```
 
+
+Старт сервиса обработки заказов
+
+```
+docker-compose up --build order_service
+```
 ---
-
-
 ### Веб интерфейс
 
 UI для получения заказов
