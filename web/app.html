@@ -1,0 +1,21 @@
+document.getElementById('btn').addEventListener('click', async () => {
+const id = document.getElementById('orderId').value.trim();
+const result = document.getElementById('result');
+if (!id) {
+result.innerHTML = '<p style="color:red">Введите id</p>';
+return;
+}
+result.innerHTML = 'Загрузка...';
+try {
+const resp = await fetch('/order/' + encodeURIComponent(id));
+if (!resp.ok) {
+const text = await resp.text();
+result.innerHTML = `<p style="color:red">Ошибка: ${resp.status} ${text}</p>`;
+return;
+}
+const json = await resp.json();
+result.innerHTML = '<pre>' + JSON.stringify(json, null, 2) + '</pre>';
+} catch (e) {
+result.innerHTML = `<p style="color:red">Ошибка: ${e.message}</p>`;
+}
+});

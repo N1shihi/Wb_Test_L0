@@ -1,0 +1,19 @@
+# Dockerfile.server
+FROM golang:1.24.3-bullseye AS builder
+RUN apt-get update && apt-get install -y build-essential librdkafka-dev
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# Собираем бинарь из cmd/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -o /app/server ./cmd/main.go
+
+FROM debian:bullseye-slim
+RUN apt-get update && apt-get install -y librdkafka1 ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/server .
+COPY configs/config.yaml ./config.yaml
+COPY web ./web
+ENV CONFIG_PATH=/app/config.yaml
+EXPOSE 8080
+CMD ["./server"]
