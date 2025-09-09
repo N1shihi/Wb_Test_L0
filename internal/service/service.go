@@ -4,28 +4,59 @@ import (
 	"Wb_Test_L0/internal/config"
 	"Wb_Test_L0/internal/models"
 	"Wb_Test_L0/internal/repository"
+	"container/list"
 	"log"
 	"sync"
 )
 
+type CacheItem struct {
+	key   string
+	value models.Order
+}
+
 type Service struct {
-	repo  *repository.Repository
-	cache map[string]models.Order
-	mu    sync.RWMutex
+	repo     *repository.Repository
+	cache    map[string]*list.Element
+	order    *list.List
+	mu       sync.RWMutex
+	capacity int
 }
 
 func NewService(repo *repository.Repository, cfg *config.Config) *Service {
 	s := &Service{
-		repo:  repo,
-		cache: make(map[string]models.Order),
+		repo:     repo,
+		cache:    make(map[string]*list.Element),
+		order:    list.New(),
+		capacity: cfg.Cache.Capacity,
 	}
+
 	orders, err := repo.GetLastOrders(cfg.Cache.Size)
 	if err == nil {
 		for _, o := range orders {
-			s.cache[o.OrderUID] = o
+			s.addToCache(o)
 		}
 	}
 	return s
+}
+
+func (s *Service) addToCache(order models.Order) {
+	if el, ok := s.cache[order.OrderUID]; ok {
+		s.order.MoveToFront(el)
+		el.Value.(*CacheItem).value = order
+		return
+	}
+
+	if s.order.Len() >= s.capacity {
+		last := s.order.Back()
+		if last != nil {
+			item := last.Value.(*CacheItem)
+			delete(s.cache, item.key)
+			s.order.Remove(last)
+		}
+	}
+
+	el := s.order.PushFront(&CacheItem{key: order.OrderUID, value: order})
+	s.cache[order.OrderUID] = el
 }
 
 func (s *Service) SaveOrder(order models.Order) error {
@@ -35,14 +66,22 @@ func (s *Service) SaveOrder(order models.Order) error {
 		return err
 	}
 	log.Printf("service: saved order %s to db", order.OrderUID)
+
+	s.mu.Lock()
+	s.addToCache(order)
+	s.mu.Unlock()
+
 	return nil
 }
 
 func (s *Service) GetOrder(orderUID string) (*models.Order, error) {
 	s.mu.RLock()
-	if order, ok := s.cache[orderUID]; ok {
+	if el, ok := s.cache[orderUID]; ok {
 		s.mu.RUnlock()
-		return &order, nil
+		s.mu.Lock()
+		s.order.MoveToFront(el)
+		s.mu.Unlock()
+		return &el.Value.(*CacheItem).value, nil
 	}
 	s.mu.RUnlock()
 
@@ -52,7 +91,7 @@ func (s *Service) GetOrder(orderUID string) (*models.Order, error) {
 	}
 
 	s.mu.Lock()
-	s.cache[order.OrderUID] = *order
+	s.addToCache(*order)
 	s.mu.Unlock()
 	return order, nil
 }
